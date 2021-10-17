@@ -5,6 +5,7 @@ import torchvision.transforms as T
 from torch.utils.data import Dataset
 import cv2
 
+
 transform_no_training = T.Compose([
         T.ToPILImage(),
         # T.Resize(512),
@@ -14,7 +15,7 @@ transform_no_training = T.Compose([
 
 transform_training = T.Compose([
         T.ToPILImage(),
-        T.Resize(256),
+        T.Resize((256,256)),
         # T.RandomHorizontalFlip(p=0.5),
         # T.RandomCrop(512, padding=4),
         T.ToTensor(),
@@ -38,11 +39,47 @@ class VideoDataset(Dataset):
         # Generating labels
         label_filename = os.path.join(self.label_root, video_path.split('\\')[-1])
         label = cv2.imread(os.path.join(label_filename, sorted(os.listdir(label_filename))[-1]))
+        label = handle_label_mse(label)
         label = cv2.resize(label,(256,256))
+        label= np.transpose(label, (2, 0, 1))
         return imgs, label_filename, label
 
     def __len__(self):
         return len(self.videos)
+    
+def handle_label_mse(label):
+    colors = [[255, 0, 0], [255, 85, 0], [255, 170, 0], [255, 255, 0], [170, 255, 0], [85, 255, 0], [0, 255, 0], \
+              [0, 255, 85], [0, 255, 170], [0, 255, 255], [0, 170, 255], [0, 85, 255], [0, 0, 255], [85, 0, 255], \
+              [170, 0, 255], [255, 0, 255], [255, 0, 170], [255, 0, 85]]
+    colors = [tuple(color) for color in colors]
+
+    h, w, c = label.shape
+    assert c == 3
+    new_label = np.zeros((h, w, 19))
+    for i in range(h):
+        for j in range(w):
+            if tuple(label[i,j]) in colors:
+                new_label[i, j, colors.index(label[i,j])] = 1
+            else:
+                new_label[i, j, 18] = 1
+    return new_label
+
+def handle_label_ce(label):
+    colors = [[255, 0, 0], [255, 85, 0], [255, 170, 0], [255, 255, 0], [170, 255, 0], [85, 255, 0], [0, 255, 0], \
+              [0, 255, 85], [0, 255, 170], [0, 255, 255], [0, 170, 255], [0, 85, 255], [0, 0, 255], [85, 0, 255], \
+              [170, 0, 255], [255, 0, 255], [255, 0, 170], [255, 0, 85]]
+    colors = [tuple(color) for color in colors]
+
+    h, w, c = label.shape
+    assert c == 3
+    new_label = np.zeros((h, w))
+    for i in range(h):
+        for j in range(w):
+            if tuple(label[i,j]) in colors:
+                new_label[i, j] = colors.index(label[i,j])
+            else:
+                new_label[i, j] = 18
+    return new_label
 
 
 if __name__ == '__main__':

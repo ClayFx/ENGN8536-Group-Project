@@ -11,9 +11,11 @@ from src import model
 from src import util
 from src.body import Body
 import cv2
+import torchvision.transforms as T
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-criterion = torch.nn.CrossEntropyLoss()
+criterion = torch.nn.MSELoss()
+# criterion = torch.nn.CrossEntropyLoss()
 
 def write_log(net, epoch, test_dataloader, criterion, train_accuracy, train_loss, save_dir, log_mode):
     with torch.no_grad():
@@ -82,12 +84,12 @@ def train(model, optimizer, dataloaders, epochs=20):
                 #     print(labels)
                 # else:
                 #     cls_scores = model(imgs, with_dyn=args.with_dyn)
-                Mconv7_stage6_L1, Mconv7_stage6_L2 = model(imgs)
+                Mconv7_stage6_L1, Mconv7_stage6_L2, heatmap = model(imgs)
                 lastest_stage6_L1, lastest_stage6_L2 = Mconv7_stage6_L1[:,-1,:,:,:], Mconv7_stage6_L2[:,-1,:,:,:]
-                heatmap, paf = extract_outputs(label, lastest_stage6_L1, lastest_stage6_L2)
+                print(lastest_stage6_L1.size(), lastest_stage6_L2.size(), heatmap.size())
+                print(label.size())
 
-
-                loss = criterion(heatmap, label)
+                loss = criterion(heatmap.float(), label.float())
 
                 optimizer.zero_grad()
                 loss.backward()
@@ -168,8 +170,8 @@ def resume(model, optimizer):
 
 
 if __name__ == '__main__':
-    PATH = "./data/image"
-    LABEL_PATH = "./data/label"
+    PATH = "/home/featurize/data/image"
+    LABEL_PATH = "/home/featurize/data/label"
 
     batch_size = 1
     epochs = 20

@@ -200,17 +200,3 @@ def npmax(array):
     j = arrayindex[i]
     return i, j
 
-def handle_label(label):
-    colors = [[255, 0, 0], [255, 85, 0], [255, 170, 0], [255, 255, 0], [170, 255, 0], [85, 255, 0], [0, 255, 0], \
-              [0, 255, 85], [0, 255, 170], [0, 255, 255], [0, 170, 255], [0, 85, 255], [0, 0, 255], [85, 0, 255], \
-              [170, 0, 255], [255, 0, 255], [255, 0, 170], [255, 0, 85]]
-
-    h, w, c = label.shape
-    assert c == 3
-    new_label = np.zeros((h, w, 19))
-    new_label[:, :, 18] = np.ones((3, 3))
-    for i in range(h):
-        for j in range(w):
-            if label[i,j] in colors:
-                new_label[i, j, colors.index(label[i,j])] = 1
-    return new_label
