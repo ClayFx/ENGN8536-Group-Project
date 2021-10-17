@@ -42,8 +42,9 @@ def extract_outputs(oriImg, Mconv7_stage6_L1, Mconv7_stage6_L2):
     multiplier = [x * boxsize / oriImg.shape[0] for x in scale_search]
     scale = multiplier[0]
 
-    oriImg = oriImg.numpy()
-
+    oriImg = oriImg.cpu().numpy()
+    oriImg = oriImg.squeeze(0)
+    # print(oriImg.shape)
     imageToTest = cv2.resize(oriImg, (0, 0), fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
     imageToTest_padded, pad = util.padRightDownCorner(imageToTest, stride, padValue)
 

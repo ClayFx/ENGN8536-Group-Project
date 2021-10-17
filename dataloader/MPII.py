@@ -14,7 +14,7 @@ transform_no_training = T.Compose([
 
 transform_training = T.Compose([
         T.ToPILImage(),
-        # T.Resize(512),
+        T.Resize(256),
         # T.RandomHorizontalFlip(p=0.5),
         # T.RandomCrop(512, padding=4),
         T.ToTensor(),
@@ -31,14 +31,14 @@ class VideoDataset(Dataset):
 
     def __getitem__(self, index):
         video_path = self.videos[index]
-        imgs = [cv2.imread(os.path.join(video_path, img)) for img in sorted(os.listdir(video_path))[-5:-1]]
+        imgs = [cv2.imread(os.path.join(video_path, img)) for img in sorted(os.listdir(video_path))[-3:-1]]
         if self.transforms:
             imgs = [self.transforms(img) for img in imgs]
         imgs = np.stack(imgs)
         # Generating labels
         label_filename = os.path.join(self.label_root, video_path.split('\\')[-1])
         label = cv2.imread(os.path.join(label_filename, sorted(os.listdir(label_filename))[-1]))
-
+        label = cv2.resize(label,(256,256))
         return imgs, label_filename, label
 
     def __len__(self):
