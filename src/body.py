@@ -13,19 +13,25 @@ from src.model import bodypose_model, gru_prediction
 
 class Body(object):
     def __init__(self, model_path, flag="pretrain"):
+        self.pretrain_path = "./model/body_pose_model.pth"
         self.model = bodypose_model()
         if torch.cuda.is_available():
             self.model = self.model.cuda()
         # model_dict = util.transfer(self.model, torch.load(model_path))
         if flag == "pretrain":
-            pretrained_dict = util.transfer(self.model, torch.load(model_path))
+            pretrained_dict = util.transfer(self.model, torch.load(self.pretrain_path))
             model_dict = self.model.state_dict()
             state_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict.keys()}
             model_dict.update(state_dict)
             self.model.load_state_dict(model_dict)
         else:
             model_dict = torch.load(model_path)
-        self.model.load_state_dict(model_dict)
+            self.model.load_state_dict(model_dict)
+            pretrained_dict = util.transfer(self.model, torch.load(self.pretrain_path))
+            model_dict = self.model.state_dict()
+            state_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict.keys()}
+            model_dict.update(state_dict)
+            self.model.load_state_dict(model_dict)
         self.model.eval()
 
     def __call__(self, oriVideo):
@@ -56,12 +62,12 @@ class Body(object):
                 data = data.cuda()
             # data = data.permute([2, 0, 1]).unsqueeze(0).float()
             with torch.no_grad():
-                # Mconv7_stage6_L1, Mconv7_stage6_L2, _, _ = self.model(data)
-                _, _, Mconv7_stage6_L1, Mconv7_stage6_L2 = self.model(data)
+                Mconv7_stage6_L1, Mconv7_stage6_L2, _, _ = self.model(data)
+                # _, _, Mconv7_stage6_L1, Mconv7_stage6_L2 = self.model(data)
                 # Mconv7_stage6_L1, Mconv7_stage6_L2 = self.rnn.forward(Mconv7_stage6_L1.cpu().unsqueeze(0),
                 #                                                       Mconv7_stage6_L2.cpu().unsqueeze(0))
-            Mconv7_stage6_L1 = Mconv7_stage6_L1[:, 0, :, :, :].cpu().numpy()
-            Mconv7_stage6_L2 = Mconv7_stage6_L2[:, 0, :, :, :].cpu().numpy()
+            Mconv7_stage6_L1 = Mconv7_stage6_L1[:, 1, :, :, :].cpu().numpy()
+            Mconv7_stage6_L2 = Mconv7_stage6_L2[:, 1, :, :, :].cpu().numpy()
 
             # extract outputs, resize, and remove padding
             # heatmap = np.transpose(np.squeeze(net.blobs[output_blobs.keys()[1]].data), (1, 2, 0))  # output 1 is heatmaps

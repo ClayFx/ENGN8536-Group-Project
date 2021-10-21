@@ -15,7 +15,7 @@ test_video = './images/video'
 oriVideo = [cv2.imread(os.path.join(test_video, oriImg)) for oriImg in os.listdir(test_video)][:-1]
 
 # oriImg = cv2.imread(test_image)  # B,G,R order
-candidate, subset = body_estimation([oriVideo[0]])
+candidate, subset = body_estimation([oriVideo[:2]])
 canvas = copy.deepcopy(oriVideo[0])
 canvas = util.draw_bodypose(canvas, candidate, subset)
 

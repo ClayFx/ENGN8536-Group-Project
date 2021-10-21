@@ -93,7 +93,7 @@ def train(model, optimizer, dataloaders, epochs=20):
 #                 loss = criterion_ce(heatmap.view(-1, 19, 256*256).float(), label.view(-1, 256*256).long())
                 
                 next_paf, next_heatmap, pre_paf, pre_heatmap = model(imgs)
-#                 loss_ce = criterion_ce(upsampled_heatmap.view(-1, 19, 256*256).float(), label.view(-1, 256*256).long())
+                # loss_ce = criterion_ce(upsampled_heatmap.view(-1, 19, 256*256).float(), label.view(-1, 256*256).long())
 
                 loss_mse_paf = criterion_mse(next_paf[:, :-1, :, :, :], pre_paf[:, 1:, :, :, :])
                 loss_mse_hm = criterion_mse(next_heatmap[:, :-1, :, :, :], pre_heatmap[:, 1:, :, :, :])
@@ -106,6 +106,7 @@ def train(model, optimizer, dataloaders, epochs=20):
                 tq.set_description(
                     'Train Epoch: {} [{}/{} ]\t Loss: {:.6f}'.format(epoch, i * len(imgs),
                                                                      len(trainloader.dataset), loss.item()))
+                # print(len(list(filter(lambda p: p.requires_grad, model.parameters()))))
                 if i % 100 == 0 and i != 0:
                     print('')
                     print('epoch:{}, iter:{}, time:{:.2f}, loss:{:.5f}'.format(epoch, i,
@@ -223,14 +224,18 @@ if __name__ == '__main__':
     model.load_state_dict(model_dict)
 
     need2freeze = [model.model0, model.model1_1, model.model2_1, model.model3_1, model.model4_1,
-                   model.model5_1, model.model6_1 , model.model1_2, model.model2_2, model.model3_2,
+                   model.model5_1, model.model6_1, model.model1_2, model.model2_2, model.model3_2,
                    model.model4_2, model.model5_2, model.model6_2]
-    for block in need2freeze:
-        freeze_weights(block)
+    need2train = [model.convLSTM_1, model.convLSTM_2]
 
+    params = [{'params': freeze_para.parameters(), 'lr': float(0)} for freeze_para in need2freeze]
+    for para in need2train:
+        params.append({'params': para.parameters(), 'lr': base_lr})
     # optimizer
-    a = list(filter(lambda p: p.requires_grad, model.parameters()))
-    optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=base_lr, betas=(0.9,0.999))
+    optimizer = torch.optim.Adam(params, lr=base_lr, betas=(0.9, 0.999))
+
+    # # optimizer
+    # optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=base_lr, betas=(0.9,0.999))
 
     train(model, optimizer, dataloaders, epochs=epochs)
     print('training finished')
