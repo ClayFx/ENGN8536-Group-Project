@@ -32,7 +32,7 @@ class VideoDataset(Dataset):
 
     def __getitem__(self, index):
         video_path = self.videos[index]
-        imgs = [cv2.imread(os.path.join(video_path, img)) for img in sorted(os.listdir(video_path))[-3:-1]]
+        imgs = [cv2.imread(os.path.join(video_path, img)) for img in sorted(os.listdir(video_path))[-4:-1]]
         if self.transforms:
             imgs = [self.transforms(img) for img in imgs]
         imgs = np.stack(imgs)
@@ -41,7 +41,7 @@ class VideoDataset(Dataset):
         label = cv2.imread(os.path.join(label_filename, sorted(os.listdir(label_filename))[-1]))
         label = handle_label_ce(label)
         label = cv2.resize(label,(256,256))
-        label= np.transpose(label, (2, 0, 1))
+        label= np.transpose(label, (1, 0))
         return imgs, label_filename, label
 
     def __len__(self):
@@ -59,7 +59,7 @@ def handle_label_mse(label):
     for i in range(h):
         for j in range(w):
             if tuple(label[i,j]) in colors:
-                new_label[i, j, colors.index(label[i,j])] = 1
+                new_label[i, j, colors.index(tuple(label[i,j]))] = 1
             else:
                 new_label[i, j, 18] = 1
     return new_label
@@ -76,7 +76,7 @@ def handle_label_ce(label):
     for i in range(h):
         for j in range(w):
             if tuple(label[i,j]) in colors:
-                new_label[i, j] = colors.index(label[i,j])
+                new_label[i, j] = colors.index(tuple(label[i,j]))
             else:
                 new_label[i, j] = 18
     return new_label

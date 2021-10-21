@@ -84,13 +84,22 @@ def train(model, optimizer, dataloaders, epochs=20):
                 #     print(labels)
                 # else:
                 #     cls_scores = model(imgs, with_dyn=args.with_dyn)
-                Mconv7_stage6_L1, Mconv7_stage6_L2, heatmap = model(imgs)
-                lastest_stage6_L1, lastest_stage6_L2 = Mconv7_stage6_L1[:,-1,:,:,:], Mconv7_stage6_L2[:,-1,:,:,:]
-                print(lastest_stage6_L1.size(), lastest_stage6_L2.size(), heatmap.size()) # torch.Size([1, 19, 256, 256])
-                print(label.size()) # torch.Size([1, 256, 256])
+                
+#                 Mconv7_stage6_L1, Mconv7_stage6_L2, heatmap = model(imgs)
+#                 lastest_stage6_L1, lastest_stage6_L2 = Mconv7_stage6_L1[:,-1,:,:,:], Mconv7_stage6_L2[:,-1,:,:,:]
+#                 print(lastest_stage6_L1.size(), lastest_stage6_L2.size(), heatmap.size())
+#                 print(label.size()) # torch.Size([1, 256, 256])
 
-                loss = criterion_ce(heatmap.view(-1, 19, 256*256).float(), label.view(-1, 256*256).float())
+#                 loss = criterion_ce(heatmap.view(-1, 19, 256*256).float(), label.view(-1, 256*256).long())
+                
+                next_paf, next_heatmap, pre_paf, pre_heatmap = model(imgs)
+#                 loss_ce = criterion_ce(upsampled_heatmap.view(-1, 19, 256*256).float(), label.view(-1, 256*256).long())
 
+                loss_mse_paf = criterion_mse(next_paf[:, :-1, :, :, :], pre_paf[:, 1:, :, :, :])
+                loss_mse_hm = criterion_mse(next_heatmap[:, :-1, :, :, :], pre_heatmap[:, 1:, :, :, :])
+                
+                loss = loss_mse_paf + loss_mse_hm
+                
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
@@ -102,39 +111,46 @@ def train(model, optimizer, dataloaders, epochs=20):
                     print('epoch:{}, iter:{}, time:{:.2f}, loss:{:.5f}'.format(epoch, i,
                         time.time()-iter_time, loss.item()))
                     iter_time = time.time()
+                
                 # total_count += labels.size(0)
                 # with torch.no_grad():
                 #     predict = torch.argmax(cls_scores, dim=1)
                 #     correct_count += (predict.cpu() == labels.cpu()).sum()
+            
+            model_parameter_checkpoint_path = f'./ckpt/{epoch}_parameter_checkpoint.pth'
+            opt_parameter_checkpoint_path = f'./ckpt/{epoch}_opt_parameter_checkpoint.pth'
+            # 1) Saving all learnable parameters of the model and optimizer
+            torch.save(model.state_dict(), model_parameter_checkpoint_path)
+            torch.save(optimizer.state_dict(), opt_parameter_checkpoint_path)
+            
+#             training_accuracy = (correct_count / total_count).item()
 
-            training_accuracy = (correct_count / total_count).item()
+#             batch_time = time.time() - batch_time
+#             print(' ')
+#             print('[epoch {} | time:{:.2f} | loss:{:.5f}]'.format(epoch, batch_time, loss.item()))
+#             print('-------------------------------------------------')
 
-            batch_time = time.time() - batch_time
-            print(' ')
-            print('[epoch {} | time:{:.2f} | loss:{:.5f}]'.format(epoch, batch_time, loss.item()))
-            print('-------------------------------------------------')
+#             if epoch % 1 == 0:
+#                 testing_accuracy = evaluate(model, testloader)
+#                 print('testing accuracy: {:.3f}'.format(testing_accuracy))
+#                 print('training accuracy: {:.3f}'.format(training_accuracy))
+#                 # Record the accuracy
+#                 with open(f"{epoch}_logging.txt", mode="a+") as file:
+#                     file.write('Training: epoch %d | Train Loss: %.6f | Train Accuracy: %.3f%% | Test Accuracy: %.3f%% \n' %
+#                            (epoch, loss.item(), 100. * training_accuracy, 100. * testing_accuracy))
 
-            if epoch % 1 == 0:
-                testing_accuracy = evaluate(model, testloader)
-                print('testing accuracy: {:.3f}'.format(testing_accuracy))
-                print('training accuracy: {:.3f}'.format(training_accuracy))
-                # Record the accuracy
-                with open(f"{epoch}_logging.txt", mode="a+") as file:
-                    file.write('Training: epoch %d | Train Loss: %.6f | Train Accuracy: %.3f%% | Test Accuracy: %.3f%% \n' %
-                           (epoch, loss.item(), 100. * training_accuracy, 100. * testing_accuracy))
+#                 if testing_accuracy > best_testing_accuracy:
+#                     model_parameter_checkpoint_path = f'./ckpt/{epoch}_parameter_checkpoint.pth'
+#                     opt_parameter_checkpoint_path = f'./ckpt/{epoch}_opt_parameter_checkpoint.pth'
+#                     # 1) Saving all learnable parameters of the model and optimizer
+#                     torch.save(model.state_dict(), model_parameter_checkpoint_path)
+#                     torch.save(optimizer.state_dict(), opt_parameter_checkpoint_path)
 
-                if testing_accuracy > best_testing_accuracy:
-                    model_parameter_checkpoint_path = f'./ckpt/{epoch}_parameter_checkpoint.pth'
-                    opt_parameter_checkpoint_path = f'./ckpt/{epoch}_opt_parameter_checkpoint.pth'
-                    # 1) Saving all learnable parameters of the model and optimizer
-                    torch.save(model.state_dict(), model_parameter_checkpoint_path)
-                    torch.save(optimizer.state_dict(), opt_parameter_checkpoint_path)
-
-                    best_testing_accuracy = testing_accuracy
-                    ### -----------------------------------------------------------------
-                    print('new best model saved at epoch: {}'.format(epoch))
-    print('-------------------------------------------------')
-    print('best testing accuracy achieved: {:.3f}'.format(best_testing_accuracy))
+#                     best_testing_accuracy = testing_accuracy
+#                     ### -----------------------------------------------------------------
+#                     print('new best model saved at epoch: {}'.format(epoch))
+#     print('-------------------------------------------------')
+#     print('best testing accuracy achieved: {:.3f}'.format(best_testing_accuracy))
 
 
 def evaluate(model, testloader):
@@ -179,8 +195,8 @@ if __name__ == '__main__':
     # LABEL_PATH = "../data/label"
 
     batch_size = 1
-    epochs = 20
-    base_lr = 0.005
+    epochs = 10
+    base_lr = 5e-5
     lr_cos = lambda n: 0.5 * (1 + np.cos(n / epochs * np.pi)) * base_lr
 
     dataset = torch_data = VideoDataset(PATH, LABEL_PATH)

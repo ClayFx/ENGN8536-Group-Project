@@ -122,7 +122,7 @@ class bodypose_model(nn.Module):
                                    kernel_size=(3, 3),
                                    num_layers=2)
         
-        self.upsample = torch.nn.ConvTranspose2d(19, 19, kernel_size=9, stride=7, padding=1, dilation=5)
+#         self.upsample = torch.nn.ConvTranspose2d(19, 19, kernel_size=9, stride=7, padding=1, dilation=5)
 
     def forward(self, x):
         b, t, c, h, w = x.size()
@@ -165,10 +165,10 @@ class bodypose_model(nn.Module):
         next_paf, paf_state = self.convLSTM_1(final_out6_1)  # next PAF
         next_heatmap, heatmap_state = self.convLSTM_2(final_out6_2)  # next heatmaps
         
-        upsampled = self.upsample(final_out6_2[:,-1,:,:,:])
+#         upsampled = self.upsample(final_out6_2[:,-1,:,:,:])
         
-        
-        return next_paf[0], next_heatmap[0], upsampled
+        return next_paf[0], next_heatmap[0], final_out6_1, final_out6_2
+#         return next_paf[0], next_heatmap[0], upsampled
 
 #     def forward(self, x):
 #         out1 = self.model0(x)
