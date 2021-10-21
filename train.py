@@ -170,8 +170,13 @@ def resume(model, optimizer):
 
 
 if __name__ == '__main__':
-    PATH = "/home/featurize/data/image"
-    LABEL_PATH = "/home/featurize/data/label"
+    # Featurized Cloud data path
+    PATH = "/home/featurize/data/data/image"
+    LABEL_PATH = "/home/featurize/data/data/label"
+
+    # # Local Data path
+    # PATH = "../data/image"
+    # LABEL_PATH = "../data/label"
 
     batch_size = 1
     epochs = 20

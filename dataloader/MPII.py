@@ -87,7 +87,7 @@ if __name__ == '__main__':
     This is to test whether the custom dataset is well-defined
     """
     from torch.utils.data import DataLoader
-    # Data path
+    # Local Data path
     PATH = "../data/image"
     LABEL_PATH = "../data/label"
 
