@@ -14,8 +14,8 @@ import cv2
 import torchvision.transforms as T
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-criterion = torch.nn.MSELoss()
-# criterion = torch.nn.CrossEntropyLoss()
+criterion_mse = torch.nn.MSELoss()
+criterion_ce = torch.nn.CrossEntropyLoss()
 
 def write_log(net, epoch, test_dataloader, criterion, train_accuracy, train_loss, save_dir, log_mode):
     with torch.no_grad():
@@ -86,10 +86,10 @@ def train(model, optimizer, dataloaders, epochs=20):
                 #     cls_scores = model(imgs, with_dyn=args.with_dyn)
                 Mconv7_stage6_L1, Mconv7_stage6_L2, heatmap = model(imgs)
                 lastest_stage6_L1, lastest_stage6_L2 = Mconv7_stage6_L1[:,-1,:,:,:], Mconv7_stage6_L2[:,-1,:,:,:]
-                print(lastest_stage6_L1.size(), lastest_stage6_L2.size(), heatmap.size())
-                print(label.size())
+                print(lastest_stage6_L1.size(), lastest_stage6_L2.size(), heatmap.size()) # torch.Size([1, 19, 256, 256])
+                print(label.size()) # torch.Size([1, 256, 256])
 
-                loss = criterion(heatmap.float(), label.float())
+                loss = criterion_ce(heatmap.view(-1, 19, 256*256).float(), label.view(-1, 256*256).float())
 
                 optimizer.zero_grad()
                 loss.backward()
