@@ -16,13 +16,14 @@ class Body(object):
         self.model = bodypose_model()
         if torch.cuda.is_available():
             self.model = self.model.cuda()
-        model_dict = util.transfer(self.model, torch.load(model_path))
+        # model_dict = util.transfer(self.model, torch.load(model_path))
+        model_dict = torch.load(model_path)
         self.model.load_state_dict(model_dict)
         self.model.eval()
-        self.rnn = gru_prediction()
 
-    def __call__(self, oriImg):
+    def __call__(self, oriVideo):
         # scale_search = [0.5, 1.0, 1.5, 2.0]
+        oriImg = oriVideo[0]
         scale_search = [0.5]
         boxsize = 368
         stride = 8
@@ -35,21 +36,25 @@ class Body(object):
 
         for m in range(len(multiplier)):
             scale = multiplier[m]
-            imageToTest = cv2.resize(oriImg, (0, 0), fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
-            imageToTest_padded, pad = util.padRightDownCorner(imageToTest, stride, padValue)
-            im = np.transpose(np.float32(imageToTest_padded[:, :, :, np.newaxis]), (3, 2, 0, 1)) / 256 - 0.5
-            im = np.ascontiguousarray(im)
-
-            data = torch.from_numpy(im).float()
+            data = []
+            for oriImg in oriVideo:
+                imageToTest = cv2.resize(oriImg, (0, 0), fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
+                imageToTest_padded, pad = util.padRightDownCorner(imageToTest, stride, padValue)
+                im = np.transpose(np.float32(imageToTest_padded[:, :, :, np.newaxis]), (3, 2, 0, 1)) / 256 - 0.5
+                im = np.ascontiguousarray(im)
+                im = torch.from_numpy(im).float()
+                data.append(im)
+            data = torch.stack(data, dim=1)
             if torch.cuda.is_available():
                 data = data.cuda()
             # data = data.permute([2, 0, 1]).unsqueeze(0).float()
             with torch.no_grad():
-                Mconv7_stage6_L1, Mconv7_stage6_L2 = self.model(data)
+                # Mconv7_stage6_L1, Mconv7_stage6_L2, _, _ = self.model(data)
+                _, _, Mconv7_stage6_L1, Mconv7_stage6_L2 = self.model(data)
                 # Mconv7_stage6_L1, Mconv7_stage6_L2 = self.rnn.forward(Mconv7_stage6_L1.cpu().unsqueeze(0),
                 #                                                       Mconv7_stage6_L2.cpu().unsqueeze(0))
-            Mconv7_stage6_L1 = Mconv7_stage6_L1.cpu().numpy()
-            Mconv7_stage6_L2 = Mconv7_stage6_L2.cpu().numpy()
+            Mconv7_stage6_L1 = Mconv7_stage6_L1[:, 0, :, :, :].cpu().numpy()
+            Mconv7_stage6_L2 = Mconv7_stage6_L2[:, 0, :, :, :].cpu().numpy()
 
             # extract outputs, resize, and remove padding
             # heatmap = np.transpose(np.squeeze(net.blobs[output_blobs.keys()[1]].data), (1, 2, 0))  # output 1 is heatmaps

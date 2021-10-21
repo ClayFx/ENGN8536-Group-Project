@@ -184,18 +184,22 @@ def resume(model, optimizer):
     print('Resume completed for the model\n')
     return model, optimizer
 
+def freeze_weights(sequential):
+    for layer in sequential:
+        for param in layer.parameters():
+            param.requires_grad = False
 
 if __name__ == '__main__':
-    # Featurized Cloud data path
-    PATH = "/home/featurize/data/data/image"
-    LABEL_PATH = "/home/featurize/data/data/label"
+    # # Featurized Cloud data path
+    # PATH = "/home/featurize/data/data/image"
+    # LABEL_PATH = "/home/featurize/data/data/label"
 
-    # # Local Data path
-    # PATH = "../data/image"
-    # LABEL_PATH = "../data/label"
+    # Local Data path
+    PATH = "./data/image"
+    LABEL_PATH = "./data/label"
 
     batch_size = 1
-    epochs = 10
+    epochs = 5
     base_lr = 5e-5
     lr_cos = lambda n: 0.5 * (1 + np.cos(n / epochs * np.pi)) * base_lr
 
@@ -218,10 +222,16 @@ if __name__ == '__main__':
     model_dict.update(state_dict)
     model.load_state_dict(model_dict)
 
-    # optimizer
-    optimizer = torch.optim.Adam(model.parameters(), lr=base_lr, betas=(0.9,0.999))
+    need2freeze = [model.model0, model.model1_1, model.model2_1, model.model3_1, model.model4_1,
+                   model.model5_1, model.model6_1 , model.model1_2, model.model2_2, model.model3_2,
+                   model.model4_2, model.model5_2, model.model6_2]
+    for block in need2freeze:
+        freeze_weights(block)
 
-    train(model, optimizer, dataloaders, epochs=20)
+    # optimizer
+    optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=base_lr, betas=(0.9,0.999))
+
+    train(model, optimizer, dataloaders, epochs=epochs)
     print('training finished')
 
 

@@ -15,7 +15,7 @@ transform_no_training = T.Compose([
 
 transform_training = T.Compose([
         T.ToPILImage(),
-        T.Resize((256,256)),
+        T.Resize((224, 224)),
         # T.RandomHorizontalFlip(p=0.5),
         # T.RandomCrop(512, padding=4),
         T.ToTensor(),
