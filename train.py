@@ -15,6 +15,7 @@ import torchvision.transforms as T
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 criterion_mse = torch.nn.MSELoss()
+criterion_L1 = torch.nn.L1Loss()
 criterion_ce = torch.nn.CrossEntropyLoss()
 
 def write_log(net, epoch, test_dataloader, criterion, train_accuracy, train_loss, save_dir, log_mode):
@@ -72,9 +73,9 @@ def train(model, optimizer, dataloaders, epochs=20):
         for epoch in tq:
             model.train()
 
-            total_count = torch.tensor([0.0])
-            correct_count = torch.tensor([0.0])
-            batch_time = time.time(); iter_time = time.time()
+            # total_count = torch.tensor([0.0])
+            # correct_count = torch.tensor([0.0])
+            # batch_time = time.time(); iter_time = time.time()
             for i, data in enumerate(trainloader):
                 # Only works for batch_number == 1.
                 imgs, _, label = data
@@ -95,8 +96,8 @@ def train(model, optimizer, dataloaders, epochs=20):
                 next_paf, next_heatmap, pre_paf, pre_heatmap = model(imgs)
                 # loss_ce = criterion_ce(upsampled_heatmap.view(-1, 19, 256*256).float(), label.view(-1, 256*256).long())
 
-                loss_mse_paf = criterion_mse(next_paf[:, :-1, :, :, :], pre_paf[:, 1:, :, :, :])
-                loss_mse_hm = criterion_mse(next_heatmap[:, :-1, :, :, :], pre_heatmap[:, 1:, :, :, :])
+                loss_mse_paf = criterion_L1(next_paf[:, :-1, :, :, :], pre_paf[:, 1:, :, :, :])
+                loss_mse_hm = criterion_L1(next_heatmap[:, :-1, :, :, :], pre_heatmap[:, 1:, :, :, :])
                 
                 loss = loss_mse_paf + loss_mse_hm
                 

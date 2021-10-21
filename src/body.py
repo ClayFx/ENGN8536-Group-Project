@@ -7,31 +7,25 @@ import matplotlib.pyplot as plt
 import matplotlib
 import torch
 from torchvision import transforms
+import torch.nn.functional as F
 
 from src import util
-from src.model import bodypose_model, gru_prediction
+from src.model import bodypose_model
+
+
+def normalization1D(data):
+    _range = np.max(data) - np.min(data)
+    return (data - np.min(data)) / _range
 
 class Body(object):
-    def __init__(self, model_path, flag="pretrain"):
+    def __init__(self, model_path):
         self.pretrain_path = "./model/body_pose_model.pth"
         self.model = bodypose_model()
         if torch.cuda.is_available():
             self.model = self.model.cuda()
         # model_dict = util.transfer(self.model, torch.load(model_path))
-        if flag == "pretrain":
-            pretrained_dict = util.transfer(self.model, torch.load(self.pretrain_path))
-            model_dict = self.model.state_dict()
-            state_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict.keys()}
-            model_dict.update(state_dict)
-            self.model.load_state_dict(model_dict)
-        else:
-            model_dict = torch.load(model_path)
-            self.model.load_state_dict(model_dict)
-            pretrained_dict = util.transfer(self.model, torch.load(self.pretrain_path))
-            model_dict = self.model.state_dict()
-            state_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict.keys()}
-            model_dict.update(state_dict)
-            self.model.load_state_dict(model_dict)
+        model_dict = torch.load(model_path)
+        self.model.load_state_dict(model_dict)
         self.model.eval()
 
     def __call__(self, oriVideo):
@@ -41,7 +35,7 @@ class Body(object):
         boxsize = 368
         stride = 8
         padValue = 128
-        thre1 = 0.1
+        thre1 = 0.99
         thre2 = 0.05
         multiplier = [x * boxsize / oriImg.shape[0] for x in scale_search]
         heatmap_avg = np.zeros((oriImg.shape[0], oriImg.shape[1], 19))
@@ -62,12 +56,15 @@ class Body(object):
                 data = data.cuda()
             # data = data.permute([2, 0, 1]).unsqueeze(0).float()
             with torch.no_grad():
-                Mconv7_stage6_L1, Mconv7_stage6_L2, _, _ = self.model(data)
-                # _, _, Mconv7_stage6_L1, Mconv7_stage6_L2 = self.model(data)
+                Mconv7_stage6_L1, Mconv7_stage6_L2, x2_paf, x_hm = self.model(data) # y
+                # _, _, Mconv7_stage6_L1, Mconv7_stage6_L2 = self.model(data) # x
                 # Mconv7_stage6_L1, Mconv7_stage6_L2 = self.rnn.forward(Mconv7_stage6_L1.cpu().unsqueeze(0),
                 #                                                       Mconv7_stage6_L2.cpu().unsqueeze(0))
-            Mconv7_stage6_L1 = Mconv7_stage6_L1[:, 1, :, :, :].cpu().numpy()
-            Mconv7_stage6_L2 = Mconv7_stage6_L2[:, 1, :, :, :].cpu().numpy()
+            Mconv7_stage6_L1 = Mconv7_stage6_L1[:, 0, :, :, :].cpu().numpy() #(1, 19 ,h ,w)
+            Mconv7_stage6_L2 = Mconv7_stage6_L2[:, 0, :, :, :].cpu().numpy()
+
+            # x2_hm = x_hm[:, 1, :, :, :].cpu().numpy()
+            # x2_paf = x_paf[:, 1, :, :, :].cpu().numpy()
 
             # extract outputs, resize, and remove padding
             # heatmap = np.transpose(np.squeeze(net.blobs[output_blobs.keys()[1]].data), (1, 2, 0))  # output 1 is heatmaps
@@ -89,8 +86,12 @@ class Body(object):
         peak_counter = 0
 
         for part in range(18):
-            map_ori = heatmap_avg[:, :, part]
+
+            map_ori = normalization1D(heatmap_avg[:, :, part])
+            # map_ori = heatmap_avg[:, :, part]
             one_heatmap = gaussian_filter(map_ori, sigma=3)
+            # cv2.imshow("1", one_heatmap)
+            # cv2.waitKey(0)
 
             map_left = np.zeros(one_heatmap.shape)
             map_left[1:, :] = one_heatmap[:-1, :]
