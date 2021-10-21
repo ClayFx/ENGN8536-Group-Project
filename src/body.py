@@ -12,12 +12,19 @@ from src import util
 from src.model import bodypose_model, gru_prediction
 
 class Body(object):
-    def __init__(self, model_path):
+    def __init__(self, model_path, flag="pretrain"):
         self.model = bodypose_model()
         if torch.cuda.is_available():
             self.model = self.model.cuda()
         # model_dict = util.transfer(self.model, torch.load(model_path))
-        model_dict = torch.load(model_path)
+        if flag == "pretrain":
+            pretrained_dict = util.transfer(self.model, torch.load(model_path))
+            model_dict = self.model.state_dict()
+            state_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict.keys()}
+            model_dict.update(state_dict)
+            self.model.load_state_dict(model_dict)
+        else:
+            model_dict = torch.load(model_path)
         self.model.load_state_dict(model_dict)
         self.model.eval()
 

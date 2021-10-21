@@ -229,6 +229,7 @@ if __name__ == '__main__':
         freeze_weights(block)
 
     # optimizer
+    a = list(filter(lambda p: p.requires_grad, model.parameters()))
     optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=base_lr, betas=(0.9,0.999))
 
     train(model, optimizer, dataloaders, epochs=epochs)
