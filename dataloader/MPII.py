@@ -40,7 +40,7 @@ class VideoDataset(Dataset):
         label_filename = os.path.join(self.label_root, video_path.split('\\')[-1])
         label = cv2.imread(os.path.join(label_filename, sorted(os.listdir(label_filename))[-1]))
         label = handle_label_ce(label)
-        label = cv2.resize(label,(256,256))
+        label = cv2.resize(label,(28,28))
         label= np.transpose(label, (1, 0))
         return imgs, label_filename, label
 
