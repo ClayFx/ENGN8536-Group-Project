@@ -15,7 +15,6 @@ import torchvision.transforms as T
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 criterion_mse = torch.nn.MSELoss()
-criterion_L1 = torch.nn.L1Loss()
 criterion_ce = torch.nn.CrossEntropyLoss()
 
 def write_log(net, epoch, test_dataloader, criterion, train_accuracy, train_loss, save_dir, log_mode):
@@ -73,9 +72,9 @@ def train(model, optimizer, dataloaders, epochs=20):
         for epoch in tq:
             model.train()
 
-            # total_count = torch.tensor([0.0])
-            # correct_count = torch.tensor([0.0])
-            # batch_time = time.time(); iter_time = time.time()
+            total_count = torch.tensor([0.0])
+            correct_count = torch.tensor([0.0])
+            batch_time = time.time(); iter_time = time.time()
             for i, data in enumerate(trainloader):
                 # Only works for batch_number == 1.
                 imgs, _, label = data
@@ -94,12 +93,13 @@ def train(model, optimizer, dataloaders, epochs=20):
 #                 loss = criterion_ce(heatmap.view(-1, 19, 256*256).float(), label.view(-1, 256*256).long())
                 
                 next_paf, next_heatmap, pre_paf, pre_heatmap = model(imgs)
-                # loss_ce = criterion_ce(upsampled_heatmap.view(-1, 19, 256*256).float(), label.view(-1, 256*256).long())
+#                 print(next_heatmap[:, -1, :, :, :].view(-1,19,28*28).shape,label.view(-1, 28*28).shape)
+                loss_ce = criterion_ce(next_heatmap[:, -1, :, :, :].view(-1,19,28*28), label.view(-1, 28*28).long())
 
-                loss_mse_paf = criterion_L1(next_paf[:, :-1, :, :, :], pre_paf[:, 1:, :, :, :])
-                loss_mse_hm = criterion_L1(next_heatmap[:, :-1, :, :, :], pre_heatmap[:, 1:, :, :, :])
+                loss_mse_paf = criterion_mse(next_paf[:, :-1, :, :, :], pre_paf[:, 1:, :, :, :])
+                loss_mse_hm = criterion_mse(next_heatmap[:, :-1, :, :, :], pre_heatmap[:, 1:, :, :, :])
                 
-                loss = loss_mse_paf + loss_mse_hm
+                loss = loss_mse_paf + loss_mse_hm + 0.3 * loss_ce
                 
                 optimizer.zero_grad()
                 loss.backward()
@@ -107,7 +107,6 @@ def train(model, optimizer, dataloaders, epochs=20):
                 tq.set_description(
                     'Train Epoch: {} [{}/{} ]\t Loss: {:.6f}'.format(epoch, i * len(imgs),
                                                                      len(trainloader.dataset), loss.item()))
-                # print(len(list(filter(lambda p: p.requires_grad, model.parameters()))))
                 if i % 100 == 0 and i != 0:
                     print('')
                     print('epoch:{}, iter:{}, time:{:.2f}, loss:{:.5f}'.format(epoch, i,
@@ -192,16 +191,16 @@ def freeze_weights(sequential):
             param.requires_grad = False
 
 if __name__ == '__main__':
-    # # Featurized Cloud data path
-    # PATH = "/home/featurize/data/data/image"
-    # LABEL_PATH = "/home/featurize/data/data/label"
+    # Featurized Cloud data path
+    PATH = "/home/featurize/data/data/image"
+    LABEL_PATH = "/home/featurize/data/data/label"
 
-    # Local Data path
-    PATH = "./data/image"
-    LABEL_PATH = "./data/label"
+#     # Local Data path
+#     PATH = "./data/image"
+#     LABEL_PATH = "./data/label"
 
     batch_size = 1
-    epochs = 5
+    epochs = 10
     base_lr = 5e-5
     lr_cos = lambda n: 0.5 * (1 + np.cos(n / epochs * np.pi)) * base_lr
 
@@ -225,18 +224,13 @@ if __name__ == '__main__':
     model.load_state_dict(model_dict)
 
     need2freeze = [model.model0, model.model1_1, model.model2_1, model.model3_1, model.model4_1,
-                   model.model5_1, model.model6_1, model.model1_2, model.model2_2, model.model3_2,
+                   model.model5_1, model.model6_1 , model.model1_2, model.model2_2, model.model3_2,
                    model.model4_2, model.model5_2, model.model6_2]
-    need2train = [model.convLSTM_1, model.convLSTM_2]
+    for block in need2freeze:
+        freeze_weights(block)
 
-    params = [{'params': freeze_para.parameters(), 'lr': float(0)} for freeze_para in need2freeze]
-    for para in need2train:
-        params.append({'params': para.parameters(), 'lr': base_lr})
     # optimizer
-    optimizer = torch.optim.Adam(params, lr=base_lr, betas=(0.9, 0.999))
-
-    # # optimizer
-    # optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=base_lr, betas=(0.9,0.999))
+    optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=base_lr, betas=(0.9,0.999))
 
     train(model, optimizer, dataloaders, epochs=epochs)
     print('training finished')
