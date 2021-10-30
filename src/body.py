@@ -35,7 +35,7 @@ class Body(object):
         boxsize = 368
         stride = 8
         padValue = 128
-        thre1 = 0.99
+        thre1 = 0.01
         thre2 = 0.05
         multiplier = [x * boxsize / oriImg.shape[0] for x in scale_search]
         heatmap_avg = np.zeros((oriImg.shape[0], oriImg.shape[1], 19))
@@ -60,8 +60,8 @@ class Body(object):
                 # _, _, Mconv7_stage6_L1, Mconv7_stage6_L2 = self.model(data) # x
                 # Mconv7_stage6_L1, Mconv7_stage6_L2 = self.rnn.forward(Mconv7_stage6_L1.cpu().unsqueeze(0),
                 #                                                       Mconv7_stage6_L2.cpu().unsqueeze(0))
-            Mconv7_stage6_L1 = Mconv7_stage6_L1[:, 0, :, :, :].cpu().numpy() #(1, 19 ,h ,w)
-            Mconv7_stage6_L2 = Mconv7_stage6_L2[:, 0, :, :, :].cpu().numpy()
+            Mconv7_stage6_L1 = Mconv7_stage6_L1[:, 3, :, :, :].cpu().numpy() #(1, 19 ,h ,w)
+            Mconv7_stage6_L2 = Mconv7_stage6_L2[:, 3, :, :, :].cpu().numpy()
 
             # x2_hm = x_hm[:, 1, :, :, :].cpu().numpy()
             # x2_paf = x_paf[:, 1, :, :, :].cpu().numpy()
@@ -87,8 +87,8 @@ class Body(object):
 
         for part in range(18):
 
-            map_ori = normalization1D(heatmap_avg[:, :, part])
-            # map_ori = heatmap_avg[:, :, part]
+            # map_ori = normalization1D(heatmap_avg[:, :, part])
+            map_ori = heatmap_avg[:, :, part]
             one_heatmap = gaussian_filter(map_ori, sigma=3)
             # cv2.imshow("1", one_heatmap)
             # cv2.waitKey(0)
