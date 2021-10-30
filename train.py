@@ -191,13 +191,13 @@ def freeze_weights(sequential):
             param.requires_grad = False
 
 if __name__ == '__main__':
-    # Featurized Cloud data path
-    PATH = "/home/featurize/data/data/image"
-    LABEL_PATH = "/home/featurize/data/data/label"
+    # # Featurized Cloud data path
+    # PATH = "/home/featurize/data/data/image"
+    # LABEL_PATH = "/home/featurize/data/data/label"
 
 #     # Local Data path
-#     PATH = "./data/image"
-#     LABEL_PATH = "./data/label"
+    PATH = "./data/image"
+    LABEL_PATH = "./data/label"
 
     batch_size = 1
     epochs = 10
